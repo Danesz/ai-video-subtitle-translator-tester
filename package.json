@@ -1,0 +1,22 @@
+{
+  "name": "ai-video-subtitle-translator-tester",
+  "version": "1.0.0",
+  "description": "Sample project for ai-video-subtitle-translator package.",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve"
+  },
+  "keywords": [
+    "html",
+    "css"
+  ],
+  "author": "Daniel Dallos",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^11.2.0"
+  },
+  "dependencies": {
+    "ai-video-subtitle-translator": "^0.0.2",
+    "theoplayer": "7.6.0"
+  }
+}

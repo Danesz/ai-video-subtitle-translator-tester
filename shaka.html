@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+    <link
+        rel="stylesheet"
+        type="text/css"
+        href="styles.css"
+    />
+
+    <!-- Shaka Player compiled library: -->
+    <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.12.1/dist/shaka-player.compiled.min.js"></script>
+    <!-- Your application source: -->
+    <script src="shaka.js"></script>
+
+    <script
+      type="text/javascript"
+      src="../../node_modules/ai-video-subtitle-translator/dist/index.umd.js"
+    ></script>
+
+    <script>
+      AIVideoSubtitleTranslator.enableDebugLog(true);
+
+      var aiLang = "en";
+      var showOriginal = true;
+      var currentAiEngine;
+
+      function switchToLang(lang) {
+        aiLang = lang;
+        hookTranlationTo(aiLang);
+      }
+
+      function doShowOriginalSubtitle(enable) {
+        showOriginal = enable;
+        renderSubtitleWithMode(showOriginal ? "showing" : "hidden");
+      }
+
+      function hookTranlationTo(language) {
+        if (currentAiEngine != undefined) {
+          currentAiEngine.destroySession();
+        }
+        const videoElement = document.querySelector("video");
+        currentAiEngine = new AIVideoSubtitleTranslator.TranslatorAi({sourceLanguage: "en", targetLanguage: language});
+        AIVideoSubtitleTranslator.initWithVideoElement(video, document.querySelector('#aitext'), currentAiEngine);
+
+      }
+
+      //hidden or showing
+      function renderSubtitleWithMode(mode) {
+        player.setTextTrackVisibility(mode === "hidden" ? false : true);
+      }
+
+
+      async function downloadModels(language){
+            const engine = new AIVideoSubtitleTranslator.TranslatorAi({sourceLanguage: "en", targetLanguage: language});
+            const modelInfoScreen = document.querySelector(`#modelInfo_${language}`);
+            const st = await engine.canWork();
+            console.log("engine status: ", st);
+            if (st === "after-download") {
+              engine.download();
+              modelInfoScreen.innerHTML = "Downloading..."
+              runDownloadTimer(engine);
+            } else {
+              updateModelInfoStatus(st);
+            }
+
+            async function runDownloadTimer(engine) {
+              const status = await currentAiEngine.canWork();
+              if ( status === "after-download") {
+                console.log("model is not yet there");
+                setTimeout(runDownloadTimer, 1000)
+              } else {
+                console.log("downlaod finished", status);
+              }
+
+              updateModelInfoStatus(status);
+
+            }
+
+            function updateModelInfoStatus(status) {
+              if (status === "after-download") {
+                modelInfoScreen.innerHTML = "Still Downloading..."
+              } else {
+                modelInfoScreen.innerHTML = status == "readily" ? "Ready!" : "Not available";
+              }
+            }
+          }
+
+    </script>
+  </head>
+  <body>
+
+    <h1>Instant, offline, on-device AI subtitle generator with Shaka Player</h1>
+    <p>This sample showcases the usage of <a href="https://www.npmjs.com/package/ai-video-subtitle-translator">ai-video-subtitle-translator</a> NPM package how to use the experimental <a href="https://developer.chrome.com/docs/ai/built-in">built-in AI in Chrome</a> for instant on-device subtitle translation while playing a video with the open-source <a href="https://github.com/shaka-project/shaka-player">Shaka Player</a>. </p>
+    <div>
+      Select AI language:
+      <br/>
+    <button onclick="switchToLang('fr')">French</button><span>Status:</span><span id="modelInfo_fr"></span>
+    <br/>
+    <button onclick="switchToLang('de')">German</button><span>Status:</span><span id="modelInfo_de"></span>
+    </div>
+    <br/>
+    <div>
+      Show/Hide original subtitle:
+      <br/>
+    <button onclick="doShowOriginalSubtitle(true)">Show</button>
+    <button onclick="doShowOriginalSubtitle(false)">Hide</button>
+    </div>
+    <div class="background">
+        <!--div class="custom-title" id="aitext">AI generated subtitle appears here!</div-->
+        <div class="custom-title" id="aitext">AI generated subtitle appears here!</div>
+        <video id="video" width="570" height="320" poster="//shaka-player-demo.appspot.com/assets/poster.jpg" controls autoplay>
+      </video>
+    </div>
+    <p><b>Notes:</b> There is no German or French text track (subtitle) available for this video. <br/><b>The translation happens on-device from the English subtitle at the moment of showing it (without any optimization)</b>.</p>
+
+    <script>
+      downloadModels("fr")
+      downloadModels("de")
+      hookTranlationTo("de");
+    </script>
+  </body>
+</html>

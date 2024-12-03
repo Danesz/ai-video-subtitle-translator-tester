@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>THEOplayer AI translator sample</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- ***** REPLACE URL TO THEOPLAYER CSS ***** -->
+        <link
+                rel="stylesheet"
+                type="text/css"
+                href="../../node_modules/theoplayer/ui.css"
+        />
+        <link
+                rel="stylesheet"
+                type="text/css"
+                href="styles.css"
+        />
+
+            <!-- ***** REPLACE URL TO THEOPLAYER JS ***** -->
+        <script
+            type="text/javascript"
+            src="../../node_modules/theoplayer/THEOplayer.js"
+        ></script>
+        <script
+          type="text/javascript"
+          src="../../node_modules/ai-video-subtitle-translator/dist/index.umd.js"
+        ></script>
+
+        <script>
+
+          AIVideoSubtitleTranslator.enableDebugLog(true);
+
+          var aiLang = "en";
+          var showOriginal = true;
+          var currentAiEngine;
+
+          function switchToLang(lang) {
+            aiLang = lang;
+            hookTranlationTo(aiLang);
+          }
+
+          function doShowOriginalSubtitle(enable) {
+            showOriginal = enable;
+            renderSubtitleWithMode(showOriginal ? "showing" : "hidden");
+          }
+
+          async function hookTranlationTo(language) {
+            if (currentAiEngine != undefined) {
+              currentAiEngine.destroySession();
+            }
+            currentAiEngine = new AIVideoSubtitleTranslator.TranslatorAi({sourceLanguage: "fr", targetLanguage: language});
+            AIVideoSubtitleTranslator.initWithTHEOplayer(player, document.querySelector('#aitext'), currentAiEngine);
+
+          }
+
+          //hidden or showing
+          function renderSubtitleWithMode(mode) {
+            const frTrack = player.textTracks.find((tt)=> tt.language.startsWith("fr"))
+            if (frTrack != undefined) {
+              frTrack.mode = mode
+            }
+          }
+
+          async function downloadModels(language){
+            const engine = new AIVideoSubtitleTranslator.TranslatorAi({sourceLanguage: "fr", targetLanguage: language});
+            const modelInfoScreen = document.querySelector(`#modelInfo_${language}`);
+            const st = await engine.canWork();
+            console.log("engine status: ", st);
+            if (st === "after-download") {
+              engine.download();
+              modelInfoScreen.innerHTML = "Downloading..."
+              runDownloadTimer(engine);
+            } else {
+              updateModelInfoStatus(st);
+            }
+
+            async function runDownloadTimer(engine) {
+              const status = await currentAiEngine.canWork();
+              if ( status === "after-download") {
+                console.log("model is not yet there");
+                setTimeout(runDownloadTimer, 1000)
+              } else {
+                console.log("downlaod finished", status);
+              }
+
+              updateModelInfoStatus(status);
+
+            }
+
+            function updateModelInfoStatus(status) {
+              if (status === "after-download") {
+                modelInfoScreen.innerHTML = "Still Downloading..."
+              } else {
+                modelInfoScreen.innerHTML = status == "readily" ? "Ready!" : "Not available";
+              }
+            }
+          }
+
+
+
+        </script>
+    </head>
+    <body>
+    <h1>Instant, offline, on-device AI subtitle generator with THEOplayer</h1>
+    <p>This sample showcases the usage of <a href="https://www.npmjs.com/package/ai-video-subtitle-translator">ai-video-subtitle-translator</a> NPM package how to use the experimental <a href="https://developer.chrome.com/docs/ai/built-in">built-in AI in Chrome</a> for instant on-device subtitle translation while playing a video with <a href="https://theoplayer.com">THEOplayer</a>. </p>
+    <div>
+      Select AI language:
+      <br/>
+    <button onclick="switchToLang('en')">English</button><span>Status:</span><span id="modelInfo_en"></span>
+    <br/>
+    <button onclick="switchToLang('de')">German</button><span>Status:</span><span id="modelInfo_de"></span>
+    </div>
+    <br/>
+    <div>
+      Show/Hide original subtitle:
+      <br/>
+    <button onclick="doShowOriginalSubtitle(true)">Show</button>
+    <button onclick="doShowOriginalSubtitle(false)">Hide</button>
+    </div>
+    <div class="theoplayer-container video-js theoplayer-skin">
+      <div class="custom-title" id="aitext">AI generated subtitle appears here!</div>
+    </div>
+    <p><b>Notes:</b> There is no English or German text track (subtitle) available for this video. <br/><b>The translation happens on-device from the French subtitle at the moment of showing it (without any optimization)</b>.</p>
+
+
+    <script>
+        const element = document.querySelector(".theoplayer-container");
+        let player = new THEOplayer.Player(element, {
+            // ***** REPLACE THEOPLAYER LOCATION *****
+            libraryLocation: "../../node_modules/theoplayer/",
+            // ***** REPLACE WITH YOUR LICENSE TO PLAY ON YOUR DOMAINS (https://portal.theoplayer.com) *****
+            license:"sZP7IYe6T6frTubt0l4gTmzc3uCZFSxe3Df-CK4KC6keIDI13Lfo0LPKIu56FOPlUY3zWokgbgjNIOf9flIKCLh_3ufZFSxlISB-3uXgCZzr0SfZFS0t3l5t3Qfz0l5cCmfVfK4_bQgZCYxNWoryIQXzImf90Sbk0Sft3LCi0u5i0Oi6Io4pIYP1UQgqWgjeCYxgflEc3L0L0l0o3S5r0SakFOPeWok1dDrLYtA1Ioh6TgV6WQjlCDcEWt3zf6i6bKXNWKPqUZklbKXpCD3ECD_-IugeTQXlFKrgUQcNIGepCYAif6i6UQ1gWtAVCYggb6rlWoz6Ymi6IQj-CDgpbkjLWt4ZCoh6TgV6WQjlCDcEWt3zf6i6UQ1gWtAVCYggb6rlWoz6Ymi6box7bZf9DZPEUQkV3mPUFOPLIDreYog-bwPgbt3NWo_6TGxZUDhVfKIgCYxkbK4LflNWYYz", 
+            ui: {
+                width: "570px",
+                height: "320px"
+            }
+        });
+     
+        downloadModels("en")
+        downloadModels("de")
+
+        hookTranlationTo("en");
+
+
+        player.source = {
+                sources: [{
+                    type : 'application/x-mpegurl',
+                    src: '//cdn.theoplayer.com/video/elephants-dream/playlist-single-audio.m3u8'
+                    //the stream already contains Chinese and French subtitles
+                }],
+                poster: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/ElephantsDreamPoster.jpg/800px-ElephantsDreamPoster.jpg',
+
+        };
+
+        // seek to a moment where they start to speak
+        player.currentTime = 165;
+        //enable French texttrack
+        player.addEventListener("canplaythrough", (ev) => {
+          renderSubtitleWithMode("hidden");
+        });
+
+    </script>
+    </body>
+</html>
